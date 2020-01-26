@@ -120,6 +120,7 @@ private:
 	ofstream outputFile;
 	int segmentAddress;
 	int eqs, gts, lts;
+	int statics;
 public:
 	codeWriter(fs::path _outputFilePath) {
 		outputFile = ofstream(_outputFilePath);
@@ -186,10 +187,46 @@ public:
 			eqs++;
 		}
 		else if (command == "gt") {
-
+			outputFile << "@0" << endl;
+			outputFile << "M=M-1" << endl;
+			outputFile << "A=M" << endl;
+			outputFile << "D=M" << endl;
+			outputFile << "A=A-1" << endl;
+			outputFile << "D=M-D" << endl;
+			outputFile << "@GREATER" << gts << endl;
+			outputFile << "D;JGT" << endl;
+			outputFile << "@0" << endl;
+			outputFile << "A=M-1" << endl;
+			outputFile << "M=0" << endl;
+			outputFile << "@DONEGREATER" << gts << endl;
+			outputFile << "0;JMP" << endl;
+			outputFile << "(GREATER" << gts << ")" << endl;
+			outputFile << "@0" << endl;
+			outputFile << "A=M-1" << endl;
+			outputFile << "M=-1" << endl;
+			outputFile << "(DONEGREATER" << gts << ")" << endl;
+			gts++;
 		}
 		else if (command == "lt") {
-
+			outputFile << "@0" << endl;
+			outputFile << "M=M-1" << endl;
+			outputFile << "A=M" << endl;
+			outputFile << "D=M" << endl;
+			outputFile << "A=A-1" << endl;
+			outputFile << "D=M-D" << endl;
+			outputFile << "@LESS" << lts << endl;
+			outputFile << "D;JLT" << endl;
+			outputFile << "@0" << endl;
+			outputFile << "A=M-1" << endl;
+			outputFile << "M=0" << endl;
+			outputFile << "@DONELESS" << lts << endl;
+			outputFile << "0;JMP" << endl;
+			outputFile << "(LESS" << lts << ")" << endl;
+			outputFile << "@0" << endl;
+			outputFile << "A=M-1" << endl;
+			outputFile << "M=-1" << endl;
+			outputFile << "(DONELESS" << lts << ")" << endl;
+			lts++;
 		}
 		else if (command == "and") {
 			outputFile << "@0" << endl;
@@ -227,7 +264,7 @@ public:
 			segmentAddress = 1;
 		}
 		else if (segment == "static") {
-			segmentAddress = 15; //temporary
+			segmentAddress = 7;
 		}
 		else if (segment == "constant") {
 			segmentAddress = -1;
@@ -239,31 +276,28 @@ public:
 			segmentAddress = 4;
 		}
 		else if (segment == "pointer") {
-			segmentAddress = 13; //temporary
+			segmentAddress = 6;
 		}
 		else if (segment == "temp") {
-			segmentAddress = 5; //temporary
+			segmentAddress = 5;
 		}
 		
 		if (cmd == command::C_PUSH) {
-			//outputFile << "@0" << endl;
-			//outputFile << "D=M" << endl;
 			if (segmentAddress > 0) {
-				if (segmentAddress == 3) {
-					outputFile << "@13" << endl;
-					outputFile << "D=M" << endl;
+				if (segmentAddress == 6) {
 					outputFile << "@3" << endl;
-					outputFile << "D=D+M" << endl;
+					outputFile << "D=A" << endl;
 				}
-				else if (segmentAddress == 4) {
-					outputFile << "@14" << endl;
-					outputFile << "D=M" << endl;
-					outputFile << "@4" << endl;
-					outputFile << "D=D+M" << endl;
+				else if (segmentAddress == 5) {
+					outputFile << "@5" << endl;
+					outputFile << "D=A" << endl;
+				}
+				else if (segmentAddress == 7) {
+					outputFile << "@STATIC." << statics++ << endl;
 				}
 				else {
 					outputFile << "@" << segmentAddress << endl;
-					outputFile << "D=A" << endl;
+					outputFile << "D=M" << endl;
 				}
 
 				outputFile << "@" << index << endl;
@@ -287,7 +321,38 @@ public:
 			}
 		}
 		else if (cmd == command::C_POP) {
+			if (segmentAddress > 0) {
+				if (segmentAddress == 6) {
+					outputFile << "@3" << endl;
+					outputFile << "D=A" << endl;
+				}
+				else if (segmentAddress == 5) {
+					outputFile << "@5" << endl;
+					outputFile << "D=A" << endl;
+				}
+				else if (segmentAddress == 7) {
 
+				}
+				else {
+					outputFile << "@" << segmentAddress << endl;
+					outputFile << "D=M" << endl;
+				}
+
+				outputFile << "@" << index << endl;
+				outputFile << "D=D+A" << endl;
+				outputFile << "@R15" << endl;
+				outputFile << "M=D" << endl;
+				outputFile << "@0" << endl;
+				outputFile << "M=M-1" << endl;
+				outputFile << "A=M" << endl;
+				outputFile << "D=M" << endl;
+				outputFile << "@R15" << endl;
+				outputFile << "A=M" << endl;
+				outputFile << "M=D" << endl;
+			}
+			else {
+				return;
+			}
 		}
 	}
 
@@ -330,6 +395,7 @@ int main(int argc, char* argv[]) {
 
 	while (bob.getHasMoreCommands()) {
 		bob.advance();
+		if (!bob.getHasMoreCommands()) break;
 		if (bob.getCommandType() == command::C_ARITHMETIC) {
 			cW.writeArithmetic(bob.getArg1());
 		}
