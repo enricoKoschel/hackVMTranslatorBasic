@@ -8,8 +8,8 @@
 using namespace std;
 namespace fs = filesystem;
 
-fs::path inputFilePathOrDir;
-bool directory = false;
+fs::path inputFilePath;
+//bool directory = false;
 fs::path outputFilePath;
 vector<fs::path> inputFilePaths;
 
@@ -119,10 +119,19 @@ class codeWriter {
 private:
 	ofstream outputFile;
 	int segmentAddress;
+	string currentVMFile;
 	int eqs, gts, lts;
-	int statics;
 public:
 	codeWriter(fs::path _outputFilePath) {
+		currentVMFile = _outputFilePath.string();
+		for (int i = 0; i < currentVMFile.length(); i++) {
+			if (isalpha(currentVMFile[i])) {
+				currentVMFile = currentVMFile.substr(i);
+				break;
+			}
+		}
+		currentVMFile = currentVMFile.substr(0, currentVMFile.find_first_of("."));
+
 		outputFile = ofstream(_outputFilePath);
 		if (!outputFile.is_open()) {
 			cerr << outputFilePath.string() << " could not be created/opened!";
@@ -130,13 +139,14 @@ public:
 		}
 	}
 
+	/*---------------------CHAPTER 8------------------------
 	void setFileName(fs::path _outputFilePath) {
 		outputFile = ofstream(_outputFilePath);
 		if (!outputFile.is_open()) {
 			cerr << outputFilePath.string() << " could not be created/opened!";
 			exit(1);
 		}
-	}
+	}*/
 
 	void writeArithmetic(string command) {
 		if (command == "add") {
@@ -293,7 +303,14 @@ public:
 					outputFile << "D=A" << endl;
 				}
 				else if (segmentAddress == 7) {
-					outputFile << "@STATIC." << statics++ << endl;
+					outputFile << "@" << currentVMFile << "." << index << endl;
+					outputFile << "D=M" << endl;
+					outputFile << "@0" << endl;
+					outputFile << "A=M" << endl;
+					outputFile << "M=D" << endl;
+					outputFile << "@0" << endl;
+					outputFile << "M=M+1" << endl;
+					return;
 				}
 				else {
 					outputFile << "@" << segmentAddress << endl;
@@ -331,7 +348,13 @@ public:
 					outputFile << "D=A" << endl;
 				}
 				else if (segmentAddress == 7) {
-
+					outputFile << "@0" << endl;
+					outputFile << "M=M-1" << endl;
+					outputFile << "A=M" << endl;
+					outputFile << "D=M" << endl;
+					outputFile << "@" << currentVMFile << "." << index << endl;
+					outputFile << "M=D" << endl;
+					return;
 				}
 				else {
 					outputFile << "@" << segmentAddress << endl;
@@ -363,20 +386,22 @@ public:
 
 int handleArguments(int argc, char* argv[]) {
 	if (argc == 2) {
-		inputFilePathOrDir = argv[1];
-		int pos = inputFilePathOrDir.string().find(".vm", 1);
+		inputFilePath = argv[1];
+		int pos = inputFilePath.string().find(".vm", 1);
 		if (pos != string::npos) {
-			outputFilePath = inputFilePathOrDir.string().substr(0, pos) + ".asm";
+			outputFilePath = inputFilePath.string().substr(0, pos) + ".asm";
 		}
+
+		/*---------------------CHAPTER 8------------------------
 		else {
-			int lastChar = inputFilePathOrDir.string().length() - 1;
-			while (inputFilePathOrDir.string()[lastChar] == '/' || inputFilePathOrDir.string()[lastChar] == '\\') {
-				inputFilePathOrDir = inputFilePathOrDir.string().substr(0, lastChar);
-				lastChar = inputFilePathOrDir.string().length() - 1;
+			int lastChar = inputFilePath.string().length() - 1;
+			while (inputFilePath.string()[lastChar] == '/' || inputFilePath.string()[lastChar] == '\\') {
+				inputFilePath = inputFilePath.string().substr(0, lastChar);
+				lastChar = inputFilePath.string().length() - 1;
 			}
-			outputFilePath = inputFilePathOrDir.string() + ".asm";
+			outputFilePath = inputFilePath.string() + ".asm";
 			directory = true;
-		}
+		}*/
 	}
 	else {
 		return 1;
@@ -390,7 +415,7 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	parserModule bob = parserModule(inputFilePathOrDir);
+	parserModule bob = parserModule(inputFilePath);
 	codeWriter cW = codeWriter(outputFilePath);
 
 	while (bob.getHasMoreCommands()) {
