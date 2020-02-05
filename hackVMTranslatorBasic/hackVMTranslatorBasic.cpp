@@ -47,7 +47,10 @@ public:
 		if (!hasMoreCommands) return;
 		if (getline(inputFile, line)) {
 			currentLine++;
-			if ((line[0] == '/' && line[1] == '/') || line == "") {
+
+			line = line.substr(0, line.find("//"));
+
+			if (line == "") {
 				advance();
 			}
 
@@ -75,7 +78,7 @@ public:
 					string thirdSegment = line.substr(firstSpace + 2).substr(secondSpace);
 
 					for (auto chr : thirdSegment) {
-						if (!isdigit(chr)) {
+						if (!isdigit(chr) && chr != ' ') {
 							cerr << "Error on line: " << currentLine << endl;
 							exit(1);
 						}
